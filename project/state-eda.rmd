@@ -1,0 +1,27 @@
+---
+title: "County EDA"
+output: html_notebook
+---
+
+```{r warnings=FALSE}
+library(tidyverse, warn.conflicts = FALSE)
+library(tidycensus)
+library(openxlsx)
+library(srvyr, warn.conflicts = FALSE)
+library(leaps)
+library(zoo)
+```
+
+```{r warning=FALSE}
+setwd("C:/Users/Simi/Documents/GitHub/CDC2021-project")
+df <- read.xlsx("datasets/aspe-uninsured-estimates-by-state.xlsx", "All Uninsured (%)", check.names=TRUE)
+
+df[,2:49] <- lapply(df[,2:47], as.numeric)
+
+head(df)
+```
+
+```{r}
+
+```
+

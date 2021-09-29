@@ -1,0 +1,106 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Import libraries for working with Excel data, Census info, and survey info
+
+```{r warnings=FALSE}
+library(tidyverse, warn.conflicts = FALSE)
+library(tidycensus)
+library(openxlsx)
+library(srvyr, warn.conflicts = FALSE)
+library(leaps)
+library(zoo)
+```
+
+Import the main data
+
+```{r warning=FALSE}
+setwd("C:/Users/Simi/Documents/GitHub/CDC2021-project")
+df <- read.xlsx("datasets/aspe-uninsured-estimates-by-puma.xlsx", "All Uninsured (%)", check.names=TRUE)
+
+df[,4:49] <- lapply(df[,4:49], as.numeric)
+
+head(df)
+```
+```{r warning=FALSE}
+# Interpolate data for <100% FPL column by subtracting all other income brackets from 100%, and do the same method of interpolation for 100-138% column
+# Also add a column for less than 139% FPL and one for % under 35 years old
+fixed_df <- df %>%
+  mutate(
+    # Interpolate data for <100% column
+    X..HIU.Income...100..FPL = ifelse(is.na(X..HIU.Income...100..FPL), 1 - X..HIU.Income.100.138..FPL - X..HIU.Income.139.249..FPL - X..HIU.Income.250.400..FPL - X..HIU.Income.400..FPL, X..HIU.Income...100..FPL),
+    # Interpolate date for 100-138% column
+    X..HIU.Income.100.138..FPL = ifelse(is.na(X..HIU.Income.100.138..FPL), 1 - X..HIU.Income...100..FPL - X..HIU.Income.139.249..FPL - X..HIU.Income.250.400..FPL - X..HIU.Income.400..FPL, X..HIU.Income.100.138..FPL), 
+    # Interpolate data for Age 0-18 column
+    X..Age.0.18 = ifelse(is.na(X..Age.0.18), 1 - X..Age.19.34 - X..Age.35.49 - X..Age.50.64, X..Age.0.18))
+
+# Replace NAs with 0, might need to remove this later
+fixed_df <- replace(fixed_df, is.na(fixed_df), 0)
+
+# Add <139% FPL and <35 columns
+fixed_df <- fixed_df %>%
+  mutate(
+    X..HIU.Income...138..FPL = X..HIU.Income...100..FPL + X..HIU.Income.100.138..FPL, 
+    X..Age.0.34 = X..Age.0.18 + X..Age.19.34,
+    )
+
+# Get interesting columns
+df_select = fixed_df %>%
+  select(PUMAState, Percent.Uninsured, X..HIU.Income...138..FPL, X..Age.0.34, X..Male, X..Child.in.Family, X..Spanish.Hispanic.Latino.Origin, X..White.Non.Latino, X..Black.Non.Latino, X..SNAP.Recipient, X..With.a.disability, X..College.Grad, X..No.English.Speaking.Adults.in.HH)
+
+head(fixed_df)
+```
+
+
+Clean Data
+
+```{r}
+# First, just looking at the number of missing values
+nrow(fixed_df)
+
+cat("\nNumber of NA Values per Column\n");
+sapply(fixed_df, function(x) sum(is.na(x)))
+
+# Remove rows with NA anywhere
+df_clean = fixed_df[complete.cases(fixed_df), ]
+
+nrow(df_clean)
+
+cat("\nNumber of NA Values per Column\n");
+sapply(df_clean, function(x) sum(is.na(x)))
+```
+
+
+```{r}
+full = lm(Percent.Uninsured ~ X..HIU.Income...138..FPL + X..Age.0.34 + X..Male + X..Child.in.Family + X..Spanish.Hispanic.Latino.Origin + X..White.Non.Latino + X..Black.Non.Latino + X..SNAP.Recipient + X..With.a.disability + X..College.Grad + X..No.English.Speaking.Adults.in.HH, data = df_clean)
+
+none = lm(Percent.Uninsured ~ 1, df_clean)
+
+MSE = (summary(full)$sigma)^2
+
+forward <- step(none, direction='both', scope=list(upper=full), scale=MSE, trace=0)
+
+forward$anova
+```
+
+```{r}
+mod = lm(Percent.Uninsured ~ ., data=fixed_df[,6:51])
+summary(mod)
+```
+
+Correlated predictors are X..HIU.Income...100..FPL, X..HIU.Income.100.138..FPL, X..HIU.Income.139.249..FPL, X..SNAP.Recipient, and the new columns X..HIU.Income...138..FPL and X..Age.0.34
+To a lesser extent, X..HIU.Income.250.400..FPL, X..HIU.Income.400..FPL, X..Employed.in.Mining.Construction.Industry, and X..Employed.in.Manufacturing.Industry
+
+```{r}
+ggplot(data = fixed_df, aes(x = X..HIU.Income...138..FPL, y = Percent.Uninsured)) +
+  geom_point() +
+  labs(x = "Predictor", y = "% Uninsured", title = "testing") +
+  stat_smooth(method = "lm", color = "red") +
+  stat_smooth(method = "lm", formula = y ~ x + I(x^2)) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Of these, X..HIU.Income...138..FPL, X..SNAP.Recipient, and X..Age.0.34 look interesting
+
