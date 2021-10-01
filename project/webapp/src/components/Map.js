@@ -83,6 +83,28 @@ const Map = () => {
         'country-label'
       );
 
+      map.addLayer(
+        {
+          id: 'countries-selected',
+          type: 'fill',
+          source: 'countries',
+          layout: {},
+          paint: {
+            'fill-outline-color': '#004077',
+            'fill-color': '#004077',
+            'fill-opacity': 1.0,
+          },
+          filter: ['in', 'GEO_ID', '']
+        },
+        'country-label'
+      );
+
+      map.on('click', 'countries', (e) => {
+        const features = map.queryRenderedFeatures(e.point, { layers: ['countries'] });
+        const geo_id = features.map((feature) => feature.properties.GEO_ID);
+        map.setFilter('countries-selected', ['in', 'GEO_ID', ...geo_id]);
+      });
+
       map.setPaintProperty('countries', 'fill-color', {
         property: datalegend.property,
         stops: datalegend.stops
@@ -156,50 +178,3 @@ const Map = () => {
 };
 
 export default Map;
-
-// export default class Map extends React.PureComponent {  
-//   constructor(props) {
-//     super(props);
-//     this.state = {
-//       lng: -79.046761,
-//       lat: 35.904613,
-//       zoom: 9,
-//     };
-//     this.mapContainer = React.createRef();
-//   }
-
-//   componentDidMount() {
-//     const { lng, lat, zoom } = this.state;
-//     const map = new mapboxgl.Map({
-//       container: this.mapContainer.current,
-//       style: "mapbox://styles/mapbox/dark-v10",
-//       center: [lng, lat],
-//       zoom: zoom,
-//     });
-
-//     map.on("move", () => {
-//       this.setState({
-//         lng: map.getCenter().lng.toFixed(4),
-//         lat: map.getCenter().lat.toFixed(4),
-//         zoom: map.getZoom().toFixed(2),
-//       });
-//     });
-//   }
-
-//   render() {
-//     const { lng, lat, zoom } = this.state;
-//     return (
-//       <div>
-//         {/* Sidebar showing lat/long and zoom */}
-//         <div className="sidebar">
-//           Longitude: {lng} | Latitude: {lat} | Zoom: {zoom}
-//         </div>
-
-//         {/* Map */}
-//         <div ref={this.mapContainer} className="map-container" />
-//       </div>
-//     );
-//   }
-// }
-
-//https://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_050_00_5m.json
