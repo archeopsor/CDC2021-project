@@ -35,21 +35,24 @@ const Map = () => {
   useEffect(() => {
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
-      style: 'mapbox://styles/mapbox/dark-v10',
+      style: 'mapbox://styles/mapbox/light-v10',
       center: [lng, lat],
       zoom: zoom
     });
 
+    var hoveredCountyId = null;
+
     map.on('load', () => {
-      map.addSource('counties', {
+      map.addSource('countries', {
         type: 'geojson',
-        data
+        data,
+        promoteId: "GEO_ID"
       });
 
-      map.setLayoutProperty('county-label', 'text-field', [
+      map.setLayoutProperty('country-label', 'text-field', [
         'format',
         ['get', 'name_en'],
-        { 'font-scale': 1.2},
+        { 'font-scale': 1.2 },
         '\n',
         {},
         ['get', 'name'],
@@ -57,21 +60,30 @@ const Map = () => {
           'font-scale': 0.8,
           'text-font': [
             'literal',
-            ['DIN OFFC Pro Italic', 'Arial Unicode MS Regular']
+            ['DIN Offc Pro Italic', 'Arial Unicode MS Regular']
           ]
         }
       ]);
-      
+
       map.addLayer(
         {
-          id: 'counties',
+          id: 'countries',
           type: 'fill',
-          source: 'counties'
+          source: 'countries',
+          layout: {},
+          paint: {
+            'fill-opacity': [
+              'case',
+              ['boolean', ['feature-state', 'hover'], false],
+              1,
+              0.6
+            ]
+          }
         },
         'country-label'
       );
-      
-      map.setPaintProperty('counties', 'fill-color', {
+
+      map.setPaintProperty('countries', 'fill-color', {
         property: datalegend.property,
         stops: datalegend.stops
       });
@@ -84,6 +96,35 @@ const Map = () => {
       setLng(map.getCenter().lng.toFixed(4));
       setLat(map.getCenter().lat.toFixed(4));
       setZoom(map.getZoom().toFixed(2));
+    });
+
+    // Hover action
+    map.on("mousemove", "countries", (e) => {
+      if (e.features.length === 0) return;
+      if (e.features.length > 0) {
+        if (hoveredCountyId) {
+          map.setFeatureState(
+            { source: "countries", id: hoveredCountyId },
+            { hover: false}
+          );
+        }
+        hoveredCountyId = e.features[0].id;
+        map.setFeatureState(
+          { source: 'countries', id: hoveredCountyId },
+          { hover: true }
+        );
+      }
+    });
+
+    // Un-hover action
+    map.on('mouseleave', 'countries', () => {
+      if (hoveredCountyId) {
+        map.setFeatureState(
+          {source: 'countries', id: hoveredCountyId },
+          { hover: false }
+        );
+      }
+      hoveredCountyId = null;
     });
 
     return () => map.remove();
