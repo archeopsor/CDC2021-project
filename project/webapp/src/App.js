@@ -1,12 +1,23 @@
-import React from 'react';
-import Map from './components/Map'
+import React from "react";
+import Map from "./components/Map";
+import Chart from "./components/Chart";
+import { connect } from "react-redux";
 
-function App() {
+const mapStateToProps = (state) => {
+  return { data: state.data };
+};
+
+function App(store) {
   return (
     <div>
-      <Map />
+      <div className="App">
+        <Map store={store} />
+      </div>
+      <div>
+        <Chart store={store} />
+      </div>
     </div>
   );
 }
 
-export default App;
+export default connect(mapStateToProps)(App);

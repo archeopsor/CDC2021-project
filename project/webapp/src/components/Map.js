@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
+import { useStore, connect } from "react-redux";
 import "mapbox-gl/dist/mapbox-gl.css";
 import mapboxgl from "!mapbox-gl"; // eslint-disable-line import/no-webpack-loader-syntax
 import "./Map.css";
@@ -8,7 +9,7 @@ import data from "./data.json";
 mapboxgl.accessToken = // This is a public token, so no worries about it being shown on github
   "pk.eyJ1IjoiYXJjaGVvcHNvciIsImEiOiJja3UyMGZsNmk0MjNhMm9wM3A5bGswdTJuIn0.atO6m2GdbRSzctGhblMJSQ";
 
-const Map = () => {
+const Map = (store) => {
   const datalegend = {
     name: "Percent Uninsured",
     description: "Percentage of the population without health insurance.",
@@ -29,7 +30,7 @@ const Map = () => {
   const [map, setMap] = useState(null);
   const [lng, setLng] = useState(-79.0467);
   const [lat, setLat] = useState(35.9046);
-  const [zoom, setZoom] = useState(3);
+  const [zoom, setZoom] = useState(7);
 
   useEffect(() => {
     const map = new mapboxgl.Map({
@@ -115,6 +116,9 @@ const Map = () => {
         });
         const geo_id = features.map((feature) => feature.properties.GEO_ID);
         map.setFilter("countries-selected", ["in", "GEO_ID", ...geo_id]);
+
+        // Set store
+        store.store.dispatch({ type: "newCounty", payload: geo_id[0]});
       });
 
       // Chloropleth
@@ -185,7 +189,7 @@ const Map = () => {
       <div className="sidebar">
         Longitude: {lng} | Latitude: {lat} | Zoom: {zoom}
       </div>
-      <Legend active={datalegend} stops={datalegend.stops} />
+      <Legend active={datalegend} stops={datalegend.stops} className="legend" />
     </div>
   );
 };
