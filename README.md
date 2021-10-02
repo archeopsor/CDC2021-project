@@ -4,6 +4,8 @@ Welcome to the datathon/hackathon portion of the Carolina Data Challenge!
 
 This repository will serve as a starting platform for your team's project. You can create your own repository using this as a template. Click [here](https://github.com/Carolina-Data-Challenge/project-template-21/generate) or the "Use this Template" button in the top right corner to generate a repository using this one as a template.
 
+*Project is in the /project folder*
+
 ---
 
 ## Folders in this template.
